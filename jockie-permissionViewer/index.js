@@ -1,4 +1,4 @@
-const Plugin = require('powercord/Plugin');
+const { Plugin } = require('powercord/entities');
 
 const {
   getModuleByDisplayName,
@@ -113,7 +113,7 @@ module.exports = class PermissionViewer extends Plugin {
     }, additional);
   }
 
-  start () {
+  startPlugin () {
     const _this = this;
 
     const UserContextMenu = getModuleByDisplayName('UserContextMenu');
@@ -163,7 +163,7 @@ module.exports = class PermissionViewer extends Plugin {
     });
   }
 
-  unload () {
+  pluginWillUnload () {
     uninject('jockie-permissionViewer-user');
   }
 };
