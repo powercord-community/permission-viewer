@@ -1,6 +1,6 @@
 {
   "name": "Permission Viewer",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Simple permission viewer which can be used to see what permissions a user has as well as what role it originated from",
   "author": "Joakim#9814",
   "license": "MIT",

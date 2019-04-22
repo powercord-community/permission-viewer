@@ -5,7 +5,6 @@ const {
   getModule,
   React,
   constants
-
 } = require('powercord/webpack');
 
 const Permissions = Object.assign({}, constants.Permissions); // eslint-disable-line no-shadow
@@ -26,19 +25,27 @@ const { ContextMenu: { Submenu } } = require('powercord/components');
 
 const { inject, uninject } = require('powercord/injector');
 
-const { Messages } = getModule([ 'Messages' ]);
-
-const { getMember } = getModule([ 'getMember' ]);
-const { getGuild } = getModule([ 'getGuild' ]);
-
-const { int2hex } = getModule([ 'int2hex' ]);
-
 module.exports = class PermissionViewer extends Plugin {
+  async import (filter, functionName = filter) {
+    if (typeof filter === 'string') {
+      filter = [ filter ];
+    }
+
+    this[functionName] = (await getModule(filter))[functionName];
+  }
+
+  async doImport () {
+    await this.import('Messages');
+    await this.import('getMember');
+    await this.import('getGuild');
+    await this.import('int2hex');
+  }
+
   getPermissionsRaw (guildId, userId) {
     let permissions = 0;
 
-    const guild = getGuild(guildId);
-    const member = getMember(guildId, userId);
+    const guild = this.getGuild(guildId);
+    const member = this.getMember(guildId, userId);
 
     if (guild && member) {
       if (guild.ownerId === userId) {
@@ -73,7 +80,7 @@ module.exports = class PermissionViewer extends Plugin {
       if ((raw & permission) === permission) {
         permissions.entries.push({
           key: name,
-          readable: Messages[name],
+          readable: this.Messages[name],
           raw: permission
         });
       }
@@ -84,7 +91,7 @@ module.exports = class PermissionViewer extends Plugin {
 
   getRolesWithPermission (guildId, permissions, roles = null) {
     const withPermissions = [];
-    const guild = getGuild(guildId);
+    const guild = this.getGuild(guildId);
 
     if (!roles) {
       roles = guild.roles; // eslint-disable-line prefer-destructuring
@@ -113,10 +120,12 @@ module.exports = class PermissionViewer extends Plugin {
     }, additional);
   }
 
-  startPlugin () {
+  async startPlugin () {
+    await this.doImport();
+
     const _this = this;
 
-    const UserContextMenu = getModuleByDisplayName('UserContextMenu');
+    const UserContextMenu = await getModuleByDisplayName('UserContextMenu');
     inject('jockie-permissionViewer-user', UserContextMenu.prototype, 'render', function (args, res) { // eslint-disable-line func-names
       const { children } = res.props.children.props.children.props;
       const rolesIndex = children.findIndex(item => item.type.displayName === 'UserRolesGroup');
@@ -124,7 +133,7 @@ module.exports = class PermissionViewer extends Plugin {
       const { guildId } = this.props;
       const userId = this.props.user.id;
 
-      const member = getMember(guildId, userId);
+      const member = _this.getMember(guildId, userId);
       if (member) {
         const createPermissionItems = () => {
           const permissions = _this.getPermissions(guildId, userId);
@@ -142,7 +151,7 @@ module.exports = class PermissionViewer extends Plugin {
                 type: 'submenu',
                 name: permission.readable,
                 getItems: () => roles.map(role => _this.createLabel(role.name, {
-                  highlight: role.color ? int2hex(role.color) : null
+                  highlight: role.color ? _this.int2hex(role.color) : null
                 }))
               });
             } else {
