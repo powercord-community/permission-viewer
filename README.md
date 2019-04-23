@@ -2,7 +2,7 @@
 This is a permission viewer plugin made for [Powercord](https://github.com/powercord-org/powercord)
 
 ## Installation
-Drop the **jockie-permissionViewer** directory in to src/powercord/plugins
+**git clone https://github.com/powercord-community/permission-viewer.git jockie-permissionViewer**
 
 ## Example
 ![](Example.gif)
