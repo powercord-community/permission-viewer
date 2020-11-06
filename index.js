@@ -202,6 +202,7 @@ module.exports = class PermissionViewer extends Plugin {
 
       return res;
     });
+    GuildChannelUserContextMenu.default.displayName = 'GuildChannelUserContextMenu';
   }
 
   pluginWillUnload () {
