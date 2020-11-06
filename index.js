@@ -166,10 +166,10 @@ module.exports = class PermissionViewer extends Plugin {
 
           if (roles.length > 0) {
             items.push(React.createElement(Menu.MenuItem, {
-              id: permission.readable.toLowerCase(),
+              id: permission.key.toLowerCase(),
               label: permission.readable,
               children: roles.map(role => React.createElement(Menu.MenuItem, {
-                key: role.name.toLowerCase().replace(/ /g, ''),
+                id: role.id,
                 label: role.name
               }))
             }));
