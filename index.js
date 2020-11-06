@@ -178,7 +178,11 @@ module.exports = class PermissionViewer extends Plugin {
               label: permission.readable,
               children: roles.map(role => React.createElement(Menu.MenuItem, {
                 id: role.id,
-                label: role.name
+                label: React.createElement("span", {
+                  style: {
+                    color: role.colorString
+                  }
+                }, role.name)
               }))
             }));
           } else {
