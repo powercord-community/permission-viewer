@@ -114,9 +114,7 @@ module.exports = class PermissionViewer extends Plugin {
         const rolePermissions = role.permissions.data;
         if ((rolePermissions & permissions) === permissions) {
           withPermissions.push(role);
-        }
-
-        if (this.impliedPermissions) {
+        } else if (this.impliedPermissions) {
           if ((rolePermissions & Permissions.ADMINISTRATOR.data) === Permissions.ADMINISTRATOR.data) {
             withPermissions.push(role);
           }
