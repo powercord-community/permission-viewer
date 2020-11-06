@@ -7,6 +7,8 @@ const {
   constants
 } = require('powercord/webpack');
 
+const { Menu } = require('powercord/components');
+
 const Permissions = Object.assign({}, constants.Permissions); // eslint-disable-line no-shadow
 
 if (Permissions.SEND_TSS_MESSAGES) {
@@ -68,6 +70,15 @@ module.exports = class PermissionViewer extends Plugin {
     return permissions;
   }
 
+  toTitleCase(str) {
+    return str.replace(
+      /\w\S*/g,
+      function(txt) {
+        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+      }
+    );
+  }
+
   getPermissions (guildId, userId) {
     const raw = this.getPermissionsRaw(guildId, userId);
 
@@ -76,15 +87,14 @@ module.exports = class PermissionViewer extends Plugin {
       entries: []
     };
 
-    for (const [ name, permission ] of Object.entries(Permissions)) {
-      if ((raw & permission) === permission) {
+    Object.keys(Permissions).forEach(key => {
+      if((raw & parseInt(Permissions[key].data)) === parseInt(Permissions[key].data)) 
         permissions.entries.push({
-          key: name,
-          readable: this.Messages[name],
-          raw: permission
-        });
-      }
-    }
+          key,
+          readable: this.toTitleCase(key.replace(/_/g, " ")),
+          raw: parseInt(Permissions[key].data)
+        })
+    })
 
     return permissions;
   }
@@ -125,46 +135,59 @@ module.exports = class PermissionViewer extends Plugin {
 
     const _this = this;
 
-    const UserContextMenu = await getModuleByDisplayName('UserContextMenu');
-    inject('jockie-permissionViewer-user', UserContextMenu.prototype, 'render', function (args, res) { // eslint-disable-line func-names
-      const { children } = res.props.children.props.children.props;
-      const rolesIndex = children.findIndex(item => item.type.displayName === 'UserRolesGroup');
+    const GuildChannelUserContextMenu = await getModule(m => m.default && m.default.displayName === 'GuildChannelUserContextMenu');
+    inject('jockie-permissionViewer-user', GuildChannelUserContextMenu, 'default', function (args, res) { // eslint-disable-line func-names
+      const { children } = res.props.children.props;
+      const rolesMenuArea = children.find(item => {
+        // If the item is empty, we know it's not it
+        if(!item) return false;
+        // The one we're looking for has an array of children
+        if(!Array.isArray(item.props.children)) return false;
+        return item.props.children.some(c => c && c.props.id === 'roles');
+      });
 
-      const { guildId } = this.props;
-      const userId = this.props.user.id;
+      const { guildId } = args[0];
+      const userId = args[0].user.id;
 
       const member = _this.getMember(guildId, userId);
       if (member) {
-        const createPermissionItems = () => {
-          const permissions = _this.getPermissions(guildId, userId);
+        const permissions = _this.getPermissions(guildId, userId);
 
-          if (permissions.raw === 0) {
-            return _this.createLabel('None');
+        const items = [];
+
+        if (permissions.raw === 0) {
+          items.push(React.createElement(Menu.MenuItem,{
+            id: 'none',
+            label: 'None'
+          }));
+        }
+        
+        for (const permission of permissions.entries) {
+          const roles = _this.getRolesWithPermission(guildId, permission.raw, member.roles.concat([ guildId ]));
+
+          if (roles.length > 0) {
+            items.push(React.createElement(Menu.MenuItem, {
+              id: permission.readable.toLowerCase(),
+              label: permission.readable,
+              children: roles.map(role => {
+                return React.createElement(Menu.MenuItem, {
+                  key: role.name.toLowerCase().replace(/ /g, ""),
+                  label: role.name
+                })
+              })
+            }));
+          } else {
+            items.push(React.createElement(Menu.MenuItem, {
+              id: permission.readable.toLowerCase(),
+              label: permission.readable
+            }));
           }
+        }
 
-          const items = [];
-          for (const permission of permissions.entries) {
-            const roles = _this.getRolesWithPermission(guildId, permission.raw, member.roles.concat([ guildId ]));
-
-            if (roles.length > 0) {
-              items.push({
-                type: 'submenu',
-                name: permission.readable,
-                getItems: () => roles.map(role => _this.createLabel(role.name, {
-                  highlight: role.color ? _this.int2hex(role.color) : null
-                }))
-              });
-            } else {
-              items.push(_this.createLabel(permission.readable));
-            }
-          }
-
-          return items;
-        };
-
-        children.splice(rolesIndex + 1, 0, React.createElement(Submenu, {
-          name: 'Permissions',
-          getItems: createPermissionItems
+        rolesMenuArea.props.children.push(React.createElement(Menu.MenuItem, {
+          id: 'permissions',
+          label: 'Permissions',
+          children: items
         }));
       }
 
