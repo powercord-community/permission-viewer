@@ -37,7 +37,6 @@ module.exports = class PermissionViewer extends Plugin {
     await this.import('Messages');
     await this.import('getMember');
     await this.import('getGuild');
-    await this.import('int2hex');
   }
 
   getPermissionsRaw (guildId, userId) {
@@ -86,7 +85,7 @@ module.exports = class PermissionViewer extends Plugin {
       if ((raw & parseInt(Permissions[key].data)) === parseInt(Permissions[key].data)) {
         permissions.entries.push({
           key,
-          readable: this.toTitleCase(key.replace(/_/g, ' ')),
+          readable: this.Messages[key] || this.toTitleCase(key.replace(/_/g, ' ')),
           raw: parseInt(Permissions[key].data)
         });
       }
