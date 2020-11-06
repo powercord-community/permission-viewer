@@ -125,14 +125,6 @@ module.exports = class PermissionViewer extends Plugin {
     return withPermissions;
   }
 
-  createLabel (name, additional) {
-    return Object.assign({
-      type: 'button',
-      name,
-      onClick: () => {} // eslint-disable-line no-empty-function
-    }, additional);
-  }
-
   async startPlugin () {
     await this.doImport();
 
