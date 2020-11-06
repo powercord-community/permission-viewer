@@ -10,12 +10,6 @@ const { Menu } = require('powercord/components');
 
 const Permissions = Object.assign({}, constants.Permissions); // eslint-disable-line no-shadow
 
-if (Permissions.SEND_TSS_MESSAGES) {
-  Permissions.SEND_TTS_MESSAGES = Permissions.SEND_TSS_MESSAGES;
-
-  delete Permissions.SEND_TSS_MESSAGES;
-}
-
 if (Permissions.MANAGE_GUILD) {
   Permissions.MANAGE_SERVER = Permissions.MANAGE_GUILD;
 
@@ -39,27 +33,36 @@ module.exports = class PermissionViewer extends Plugin {
     await this.import('getGuild');
   }
 
+  /* Whether or not permissions that are implied (by administrator) should be shown as well */
+  impliedPermissions = true;
+
+  getAllPermissionsRaw() {
+    return Object.values(Permissions).reduce((a, b) => a | b.data, 0n);
+  }
+
   getPermissionsRaw (guildId, userId) {
-    let permissions = 0;
+    let permissions = 0n;
 
     const guild = this.getGuild(guildId);
     const member = this.getMember(guildId, userId);
 
     if (guild && member) {
       if (guild.ownerId === userId) {
-        permissions = Permissions.ADMINISTRATOR;
-      } else {
-        /* @everyone is not inlcuded in the member's roles */
-        permissions |= guild.roles[guild.id].permissions;
+        /* If they are the owner they have all the permissions */
+        return this.getAllPermissionsRaw();
+      }
+      
+      /* @everyone is not inlcuded in the member's roles */
+      permissions |= guild.roles[guild.id].permissions.data;
 
-        for (const roleId of member.roles) {
-          permissions |= guild.roles[roleId].permissions;
-        }
+      for (const roleId of member.roles) {
+        permissions |= guild.roles[roleId].permissions.data;
       }
 
-      /* If they have administrator they have every permission */
-      if ((permissions & Permissions.ADMINISTRATOR) === Permissions.ADMINISTRATOR) {
-        return Object.values(Permissions).reduce((a, b) => a | b, 0);
+      if (this.impliedPermissions) {
+        if ((permissions & Permissions.ADMINISTRATOR.data) === Permissions.ADMINISTRATOR.data) {
+          return this.getAllPermissionsRaw();
+        }
       }
     }
 
@@ -82,11 +85,11 @@ module.exports = class PermissionViewer extends Plugin {
     };
 
     Object.keys(Permissions).forEach(key => {
-      if ((raw & parseInt(Permissions[key].data)) === parseInt(Permissions[key].data)) {
+      if ((raw & Permissions[key].data) === Permissions[key].data) {
         permissions.entries.push({
           key,
           readable: this.Messages[key] || this.toTitleCase(key.replace(/_/g, ' ')),
-          raw: parseInt(Permissions[key].data)
+          raw: Permissions[key].data
         });
       }
     });
@@ -108,8 +111,15 @@ module.exports = class PermissionViewer extends Plugin {
       }
 
       if (role) {
-        if ((role.permissions & Permissions.ADMINISTRATOR) === Permissions.ADMINISTRATOR || (role.permissions & permissions) === permissions) {
+        const rolePermissions = role.permissions.data;
+        if ((rolePermissions & permissions) === permissions) {
           withPermissions.push(role);
+        }
+
+        if (this.impliedPermissions) {
+          if ((rolePermissions & Permissions.ADMINISTRATOR.data) === Permissions.ADMINISTRATOR.data) {
+            withPermissions.push(role);
+          }
         }
       }
     }
@@ -154,7 +164,7 @@ module.exports = class PermissionViewer extends Plugin {
 
         const items = [];
 
-        if (permissions.raw === 0) {
+        if (permissions.raw === 0n) {
           items.push(React.createElement(Menu.MenuItem, {
             id: 'none',
             label: 'None'
