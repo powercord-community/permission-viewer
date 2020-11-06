@@ -141,7 +141,7 @@ module.exports = class PermissionViewer extends Plugin {
     const _this = this;
 
     const GuildChannelUserContextMenu = await getModule(m => m.default && m.default.displayName === 'GuildChannelUserContextMenu');
-    inject('jockie-permissionViewer-user', GuildChannelUserContextMenu, 'default', (args, res) => { // eslint-disable-line func-names
+    inject('jockie-permissionViewer-user', GuildChannelUserContextMenu, 'default', function (args, res) { // eslint-disable-line func-names
       const { children } = res.props.children.props;
       const rolesMenuArea = children.find(item => {
         // If the item is empty, we know it's not it
@@ -152,7 +152,7 @@ module.exports = class PermissionViewer extends Plugin {
         if (!Array.isArray(item.props.children)) {
           return false;
         }
-        return item.props.children.some(c => c && c.props.id === 'roles');
+        return item.props.children.some(c => c && c.props && c.props.id === 'roles');
       });
 
       const { guildId } = args[0];
