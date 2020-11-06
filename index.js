@@ -1,7 +1,6 @@
 const { Plugin } = require('powercord/entities');
 
 const {
-  getModuleByDisplayName,
   getModule,
   React,
   constants
@@ -22,8 +21,6 @@ if (Permissions.MANAGE_GUILD) {
 
   delete Permissions.MANAGE_GUILD;
 }
-
-const { ContextMenu: { Submenu } } = require('powercord/components');
 
 const { inject, uninject } = require('powercord/injector');
 
@@ -70,12 +67,10 @@ module.exports = class PermissionViewer extends Plugin {
     return permissions;
   }
 
-  toTitleCase(str) {
+  toTitleCase (str) {
     return str.replace(
       /\w\S*/g,
-      function(txt) {
-        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-      }
+      (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
     );
   }
 
@@ -88,13 +83,14 @@ module.exports = class PermissionViewer extends Plugin {
     };
 
     Object.keys(Permissions).forEach(key => {
-      if((raw & parseInt(Permissions[key].data)) === parseInt(Permissions[key].data)) 
+      if ((raw & parseInt(Permissions[key].data)) === parseInt(Permissions[key].data)) {
         permissions.entries.push({
           key,
-          readable: this.toTitleCase(key.replace(/_/g, " ")),
+          readable: this.toTitleCase(key.replace(/_/g, ' ')),
           raw: parseInt(Permissions[key].data)
-        })
-    })
+        });
+      }
+    });
 
     return permissions;
   }
@@ -136,13 +132,17 @@ module.exports = class PermissionViewer extends Plugin {
     const _this = this;
 
     const GuildChannelUserContextMenu = await getModule(m => m.default && m.default.displayName === 'GuildChannelUserContextMenu');
-    inject('jockie-permissionViewer-user', GuildChannelUserContextMenu, 'default', function (args, res) { // eslint-disable-line func-names
+    inject('jockie-permissionViewer-user', GuildChannelUserContextMenu, 'default', (args, res) => { // eslint-disable-line func-names
       const { children } = res.props.children.props;
       const rolesMenuArea = children.find(item => {
         // If the item is empty, we know it's not it
-        if(!item) return false;
+        if (!item) {
+          return false;
+        }
         // The one we're looking for has an array of children
-        if(!Array.isArray(item.props.children)) return false;
+        if (!Array.isArray(item.props.children)) {
+          return false;
+        }
         return item.props.children.some(c => c && c.props.id === 'roles');
       });
 
@@ -156,12 +156,12 @@ module.exports = class PermissionViewer extends Plugin {
         const items = [];
 
         if (permissions.raw === 0) {
-          items.push(React.createElement(Menu.MenuItem,{
+          items.push(React.createElement(Menu.MenuItem, {
             id: 'none',
             label: 'None'
           }));
         }
-        
+
         for (const permission of permissions.entries) {
           const roles = _this.getRolesWithPermission(guildId, permission.raw, member.roles.concat([ guildId ]));
 
@@ -169,12 +169,10 @@ module.exports = class PermissionViewer extends Plugin {
             items.push(React.createElement(Menu.MenuItem, {
               id: permission.readable.toLowerCase(),
               label: permission.readable,
-              children: roles.map(role => {
-                return React.createElement(Menu.MenuItem, {
-                  key: role.name.toLowerCase().replace(/ /g, ""),
-                  label: role.name
-                })
-              })
+              children: roles.map(role => React.createElement(Menu.MenuItem, {
+                key: role.name.toLowerCase().replace(/ /g, ''),
+                label: role.name
+              }))
             }));
           } else {
             items.push(React.createElement(Menu.MenuItem, {
