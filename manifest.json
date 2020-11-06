@@ -4,6 +4,6 @@
   "description": "Simple permission viewer which can be used to see what permissions a user has as well as what role it originated from",
   "author": "Joakim#9814",
   "license": "MIT",
-  "repo": "https://github.com/21Joakim/pc-permissionViewer",
+  "repo": "https://github.com/powercord-community/permission-viewer",
   "dependencies": []
 }
