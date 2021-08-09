@@ -37,7 +37,7 @@ module.exports = class PermissionViewer extends Plugin {
   impliedPermissions = true;
 
   getAllPermissionsRaw() {
-    return Object.values(Permissions).reduce((a, b) => a | b.data, 0n);
+    return Object.values(Permissions).reduce((a, b) => a | b, 0n);
   }
 
   getPermissionsRaw (guildId, userId) {
@@ -53,14 +53,14 @@ module.exports = class PermissionViewer extends Plugin {
       }
       
       /* @everyone is not inlcuded in the member's roles */
-      permissions |= guild.roles[guild.id].permissions.data;
+      permissions |= guild.roles[guild.id].permissions;
 
       for (const roleId of member.roles) {
-        permissions |= guild.roles[roleId].permissions.data;
+        permissions |= guild.roles[roleId].permissions;
       }
 
       if (this.impliedPermissions) {
-        if ((permissions & Permissions.ADMINISTRATOR.data) === Permissions.ADMINISTRATOR.data) {
+        if ((permissions & Permissions.ADMINISTRATOR) === Permissions.ADMINISTRATOR) {
           return this.getAllPermissionsRaw();
         }
       }
@@ -85,11 +85,11 @@ module.exports = class PermissionViewer extends Plugin {
     };
 
     Object.keys(Permissions).forEach(key => {
-      if ((raw & Permissions[key].data) === Permissions[key].data) {
+      if ((raw & Permissions[key]) === Permissions[key]) {
         permissions.entries.push({
           key,
           readable: this.Messages[key] || this.toTitleCase(key.replace(/_/g, ' ')),
-          raw: Permissions[key].data
+          raw: Permissions[key]
         });
       }
     });
@@ -111,11 +111,11 @@ module.exports = class PermissionViewer extends Plugin {
       }
 
       if (role) {
-        const rolePermissions = role.permissions.data;
+        const rolePermissions = role.permissions;
         if ((rolePermissions & permissions) === permissions) {
           withPermissions.push(role);
         } else if (this.impliedPermissions) {
-          if ((rolePermissions & Permissions.ADMINISTRATOR.data) === Permissions.ADMINISTRATOR.data) {
+          if ((rolePermissions & Permissions.ADMINISTRATOR) === Permissions.ADMINISTRATOR) {
             withPermissions.push(role);
           }
         }
