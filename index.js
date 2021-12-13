@@ -133,7 +133,14 @@ module.exports = class PermissionViewer extends Plugin {
     const GuildChannelUserContextMenu = await getModule(m => m.default && m.default.displayName === 'GuildChannelUserContextMenu');
     inject('jockie-permissionViewer-user', GuildChannelUserContextMenu, 'default', function (args, res) { // eslint-disable-line func-names
       const { children } = res.props.children.props;
+      // Attempt to find the context menu area containing the "Roles" item.
+      // If no such area is found (i.e. the user has no roles), then fall back
+      // to using the next menu area after the one containing "Block" or "Unblock"
+      // (the ID is the same regardless of whether a user is blocked).
+      let childIndex = 0;
+      let blockAreaIndex = 0;
       const rolesMenuArea = children.find(item => {
+        ++childIndex;
         // If the item is empty, we know it's not it
         if (!item) {
           return false;
@@ -142,8 +149,17 @@ module.exports = class PermissionViewer extends Plugin {
         if (!Array.isArray(item.props.children)) {
           return false;
         }
-        return item.props.children.some(c => c && c.props && c.props.id === 'roles');
-      });
+        return item.props.children.some(c => {
+          if (c && c.props) {
+            if (c.props.id === 'roles') {
+              return true;
+            } else if (c.props.id === 'block') {
+              blockAreaIndex = childIndex;
+            }
+          }
+          return false;
+        });
+      }) ?? children[blockAreaIndex + 1];
 
       const { guildId } = args[0];
       const userId = args[0].user.id;
