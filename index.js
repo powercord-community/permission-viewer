@@ -153,7 +153,7 @@ module.exports = class PermissionViewer extends Plugin {
           if (c && c.props) {
             if (c.props.id === 'roles') {
               return true;
-            } else if (c.props.id === 'block') {
+            } else if (c.props.id === 'block' || c.props.id === 'change-nickname') {
               blockAreaIndex = childIndex;
             }
           }
