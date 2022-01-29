@@ -2,6 +2,7 @@ const { Plugin } = require('powercord/entities');
 
 const {
   getModule,
+  getModuleByDisplayName,
   React,
   constants
 } = require('powercord/webpack');
@@ -125,13 +126,40 @@ module.exports = class PermissionViewer extends Plugin {
     return withPermissions;
   }
 
-  async startPlugin () {
-    await this.doImport();
+  // From https://github.com/NurMarvin/guild-profile/blob/89e59764112844d4dc51c97aa4e58978ec7436ae/index.js#L170
+  _injectOpenContextMenuLazy (menus) {
+    const module = getModule([ 'openContextMenuLazy' ], false);
 
-    const _this = this;
+    inject('permission-viewer-context-lazy-menu', module, 'openContextMenuLazy', ([ event, lazyRender, params ]) => {
+      const warpLazyRender = async () => {
+        const render = await lazyRender(event);
 
-    const GuildChannelUserContextMenu = await getModule(m => m.default && m.default.displayName === 'GuildChannelUserContextMenu');
-    inject('jockie-permissionViewer-user', GuildChannelUserContextMenu, 'default', function (args, res) { // eslint-disable-line func-names
+        return (config) => {
+          const menu = render(config);
+          const menuName = menu?.type?.displayName;
+
+          if (menuName) {
+            const moduleByDisplayName = getModuleByDisplayName(menuName, false);
+
+            if (menuName in menus) {
+              menus[menuName]();
+              delete menus[menuName];
+            }
+            if (moduleByDisplayName !== null) {
+              menu.type = moduleByDisplayName;
+            }
+          }
+          return menu;
+        };
+      };
+
+      return [ event, warpLazyRender, params ];
+    }, true);
+  }
+
+  _injectContextMenu () {
+    const GuildChannelUserContextMenu = getModule(m => m.default && m.default.displayName === 'GuildChannelUserContextMenu', false);
+    inject('permission-viewer-user', GuildChannelUserContextMenu, 'default', (args, res) => {
       const { children } = res.props.children.props;
       // Attempt to find the context menu area containing the "Roles" item.
       // If no such area is found (i.e. the user has no roles), then fall back
@@ -164,9 +192,9 @@ module.exports = class PermissionViewer extends Plugin {
       const { guildId } = args[0];
       const userId = args[0].user.id;
 
-      const member = _this.getMember(guildId, userId);
+      const member = this.getMember(guildId, userId);
       if (member) {
-        const permissions = _this.getPermissions(guildId, userId);
+        const permissions = this.getPermissions(guildId, userId);
 
         const items = [];
 
@@ -178,7 +206,7 @@ module.exports = class PermissionViewer extends Plugin {
         }
 
         for (const permission of permissions.entries) {
-          const roles = _this.getRolesWithPermission(guildId, permission.raw, member.roles.concat([ guildId ]));
+          const roles = this.getRolesWithPermission(guildId, permission.raw, member.roles.concat([ guildId ]));
 
           if (roles.length > 0) {
             items.push(React.createElement(Menu.MenuItem, {
@@ -213,7 +241,16 @@ module.exports = class PermissionViewer extends Plugin {
     GuildChannelUserContextMenu.default.displayName = 'GuildChannelUserContextMenu';
   }
 
+  async startPlugin () {
+    await this.doImport();
+
+    this._injectOpenContextMenuLazy({
+      GuildChannelUserContextMenu: this._injectContextMenu.bind(this)
+    });
+  }
+
   pluginWillUnload () {
-    uninject('jockie-permissionViewer-user');
+    uninject('permission-viewer-context-lazy-menu');
+    uninject('permission-viewer-user');
   }
 };
