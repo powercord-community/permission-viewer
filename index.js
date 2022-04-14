@@ -16,7 +16,7 @@ if (Permissions.MANAGE_GUILD) {
   delete Permissions.MANAGE_GUILD;
 }
 
-const { injectContextMenu } = require("powercord/util");
+const { injectContextMenu, findInReactTree } = require("powercord/util");
 
 const { uninject } = require('powercord/injector');
 
@@ -130,21 +130,25 @@ module.exports = class PermissionViewer extends Plugin {
   _injectContextMenu () {
     injectContextMenu('permission-viewer-user', 'GuildChannelUserContextMenu', (args, res) => {
       if (!res) return res;
-      const { children } = res.props;
       // Attempt to find the context menu area containing the "Roles" item.
       // If no such area is found (i.e. the user has no roles), then fall back
       // to using the next menu area after the one containing "Block" or "Unblock"
       // (the ID is the same regardless of whether a user is blocked).
+      const idsArray = ['roles', 'block', 'change-nickname'];
+      const menuItems = findInReactTree(res.props.children, e => {
+        return Array.isArray(e) && e.some(f => {
+          return Array.isArray(f?.props?.children) && f.props.children.some(g => {
+            return idsArray.includes(g?.props?.id);
+          });
+        });
+      });
       let childIndex = 0;
       let blockAreaIndex = 0;
-      const rolesMenuArea = children.find(item => {
+      const rolesMenuArea = menuItems.find(item => {
         ++childIndex;
         // If the item is empty, we know it's not it
-        if (!item) {
-          return false;
-        }
         // The one we're looking for has an array of children
-        if (!Array.isArray(item.props.children)) {
+        if (!(item && Array.isArray(item.props.children))) {
           return false;
         }
         return item.props.children.some(c => {
@@ -157,7 +161,7 @@ module.exports = class PermissionViewer extends Plugin {
           }
           return false;
         });
-      }) ?? children[blockAreaIndex + 1];
+      }) ?? menuItems[blockAreaIndex + 1];
 
       const { guildId } = args[0];
       const userId = args[0].user.id;
@@ -198,7 +202,10 @@ module.exports = class PermissionViewer extends Plugin {
             }));
           }
         }
-
+        
+        if (!Array.isArray(rolesMenuArea.props.children)) {
+          rolesMenuArea.props.children = [rolesMenuArea.props.children];
+        }
         rolesMenuArea.props.children.push(React.createElement(MenuItem, {
           id: 'permissions',
           label: 'Permissions',
